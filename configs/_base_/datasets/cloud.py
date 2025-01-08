@@ -1,5 +1,5 @@
-dataset_type = 'L8BIOMEDataset'
-data_root = 'data/l8_biome'
+dataset_type = 'CloudDataset'
+data_root = 'data/cloud'
 
 crop_size = (512, 512)
 train_pipeline = [

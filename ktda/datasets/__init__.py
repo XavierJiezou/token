@@ -1,7 +1,7 @@
 from .grass import GrassDataset
-from .l8_biome import L8BIOMEDataset
+from .cloud import CloudDataset
 
 __all__ = [
     "GrassDataset",
-    "L8BIOMEDataset"
+    "CloudDataset"
 ]

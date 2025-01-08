@@ -3,7 +3,7 @@ from mmseg.datasets import BaseSegDataset
 
 
 @DATASETS.register_module()
-class L8BIOMEDataset(BaseSegDataset):
+class CloudDataset(BaseSegDataset):
     METAINFO = dict(
         classes=("Clear", "Cloud Shadow", "Thin Cloud", "Cloud"),
         palette=[
