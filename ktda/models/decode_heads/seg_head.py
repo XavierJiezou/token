@@ -412,13 +412,34 @@ class OursDecoder(BaseDecodeHead):
         # torch.Size([bs, 1024, 32, 32])
         # conv,i-> torch.Size([bs,cls, 512, 512])
         seg_output = self.class_agg(seg_output)
-        return seg_output
+        # return seg_output,hyper_in
+        return {
+            "seg_output":seg_output,
+            "hyper_in":hyper_in
+        }
 
     def cls_seg(self, feat):
         """Classify each pixel."""
-        return feat
+        return feat["seg_output"]
 
     def predict_by_feat(
         self, seg_logits: Tensor, batch_img_metas: List[dict]
     ) -> Tensor:
-        return seg_logits
+        return seg_logits["seg_output"]
+    
+    def loss_by_feat(self, seg_logits: Dict[str,Tensor],
+                     batch_data_samples) -> dict:
+        """Compute segmentation loss.
+
+        Args:
+            seg_logits (Tensor): The output from decode head forward function.
+            batch_data_samples (List[:obj:`SegDataSample`]): The seg
+                data samples. It usually includes information such
+                as `metainfo` and `gt_sem_seg`.
+
+        Returns:
+            dict[str, Tensor]: a dictionary of loss components
+        """
+
+        seg_logits = seg_logits["seg_output"]
+        return super().loss_by_feat(seg_logits, batch_data_samples)

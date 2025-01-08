@@ -1,4 +1,3 @@
-# Copyright (c) OpenMMLab. All rights reserved.
 import logging
 from typing import List, Optional
 

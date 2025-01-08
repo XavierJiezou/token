@@ -1,4 +1,4 @@
-from .segmentors import DistillEncoderDecoder
+from .segmentors import DistillEncoderDecoder, ContrastLossEncoderDecoder
 from .fam import FAM
 from .fmm import FMM
 from .backbones.face_seg_backbone import SegFaceCeleb
@@ -14,4 +14,5 @@ __all__ = [
     "TwoWayTransformer",
     "OursDecoder",
     "OursTwoWayTransformer",
+    "ContrastLossEncoderDecoder",
 ]
