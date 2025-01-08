@@ -11,7 +11,7 @@ model = dict(
     backbone=dict(model="swin_base",out_chans=64),
     decode_head=dict(
         type="OursDecoder",
-        token_lens=10,
+        token_lens=15,
         transformer=dict(type="OursTwoWayTransformer", depth=1,embedding_dim=64),
         transformer_dim=64,
     ),
