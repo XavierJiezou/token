@@ -9,7 +9,7 @@ data_preprocessor = dict(size=(256, 256))
 model = dict(
     type="ContrastLossEncoderDecoder",
     has_contrast_loss=True,
-    lambda_contrast=100,
+    lambda_contrast=1,
     data_preprocessor=data_preprocessor,
     backbone=dict(model="swin_base"),
     decode_head=dict(
