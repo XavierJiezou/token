@@ -13,5 +13,6 @@ model = dict(
         type="OursDecoder",
         token_lens=15,
         transformer=dict(type="OursTwoWayTransformer", depth=1),
+        num_classes=4
     ),
 )

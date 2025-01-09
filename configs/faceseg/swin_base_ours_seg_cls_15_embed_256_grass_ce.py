@@ -2,7 +2,7 @@ _base_ = [
     "../_base_/models/face_seg.py",
     "../_base_/datasets/grass.py",
     "../_base_/default_runtime.py",
-    "../_base_/schedules/grass_scedule.py",
+    "../_base_/schedules/grass_schedule.py",
 ]
 
 data_preprocessor = dict(size=(256, 256))
@@ -13,7 +13,6 @@ model = dict(
         type="OursDecoder",
         token_lens=15,
         transformer=dict(type="OursTwoWayTransformer", depth=1),
-        num_classes=4,
         loss_decode=[
             dict(type="CrossEntropyLoss", use_sigmoid=False, loss_weight=1.0)
         ],
