@@ -416,6 +416,7 @@ class OursDecoder(BaseDecodeHead):
         pos_src = image_pe.expand(image_embeddings.size(0), -1, -1, -1)
         b, c, h, w = src.shape
         # Run the transformer
+        # print(src.shape, pos_src.shape, tokens.shape)
         hs, src = self.transformer(
             src, pos_src, tokens
         )  ####### hs - torch.Size([BS, 11, 256]), src - torch.Size([BS, 16348, 256])

@@ -377,7 +377,7 @@ class SegfaceMLP(nn.Module):
 
 @MODELS.register_module()
 class SegFaceCeleb(BaseModule):
-    def __init__(self, input_resolution, model,dinov2_config=None,out_chans=256,**kwargs):
+    def __init__(self, input_resolution, model,dinov2_config=None,out_chans=256,has_conv1x1=True,position_embedding=256,**kwargs):
         super().__init__(**kwargs)
         self.input_resolution = input_resolution
         self.model = model
@@ -445,7 +445,7 @@ class SegFaceCeleb(BaseModule):
         embed_dim = 1024
         # out_chans = 256
 
-        self.pe_layer = PositionEmbeddingRandom(out_chans // 2)
+        self.pe_layer = PositionEmbeddingRandom(position_embedding // 2)
 
         for name, module in self.backbone.named_modules():
             if name in self.target_layer_names:
@@ -491,12 +491,15 @@ class SegFaceCeleb(BaseModule):
         self.linear_c = nn.ModuleList(mlps)
 
         # The following 3 layers implement the ConvModule of the original implementation
-        self.linear_fuse = nn.Conv2d(
-            in_channels=decoder_hidden_size * num_encoder_blocks,
-            out_channels=decoder_hidden_size,
-            kernel_size=1,
-            bias=False,
-        )
+        if has_conv1x1:
+            self.linear_fuse = nn.Conv2d(
+                in_channels=decoder_hidden_size * num_encoder_blocks,
+                out_channels=decoder_hidden_size,
+                kernel_size=1,
+                bias=False,
+            )
+        else:
+            self.linear_fuse = nn.Identity()
 
     def save_features_hook(self, name):
         def hook(module, input, output):
