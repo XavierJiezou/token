@@ -134,6 +134,8 @@ class TwoWayAttentionBlock(nn.Module):
         activation: Type[nn.Module] = nn.ReLU,
         attention_downsample_rate: int = 2,
         skip_first_layer_pe: bool = False,
+        do_attention1: bool = True,
+        do_attention2: bool = True,
     ) -> None:
         """
         A transformer block with four layers: (1) self-attention of sparse
@@ -149,6 +151,8 @@ class TwoWayAttentionBlock(nn.Module):
           skip_first_layer_pe (bool): skip the PE on the first layer
         """
         super().__init__()
+        self.do_attention1 = do_attention1
+        self.do_attention2 = do_attention2
         self.self_attn = Attention(embedding_dim, num_heads)
         self.norm1 = nn.LayerNorm(embedding_dim)
 
@@ -206,6 +210,8 @@ class TwoWayAttentionBlock(nn.Module):
     def do_attn1(
         self, queries: Tensor, keys: Tensor, query_pe: Tensor, key_pe: Tensor
     ) -> Tensor:
+        if not self.do_attention1:
+            return queries
         q = queries + query_pe
         k = keys + key_pe
         attn_out = self.cross_attn_token_to_image(q=q, k=k, v=keys)
@@ -216,6 +222,8 @@ class TwoWayAttentionBlock(nn.Module):
     def do_attn2(
         self, queries: Tensor, keys: Tensor, query_pe: Tensor, key_pe: Tensor
     ) -> Tensor:
+        if not self.do_attention2:
+            return keys
         q = queries + query_pe
         k = keys + key_pe
         attn_out = self.cross_attn_image_to_token(q=k, k=q, v=queries)
@@ -234,6 +242,8 @@ class OursTwoWayTransformer(nn.Module):
         mlp_dim: int,
         activation: Type[nn.Module] = nn.ReLU,
         attention_downsample_rate: int = 2,
+        do_attn1: bool = True,
+        do_attn2: bool = True,
     ) -> None:
         """
         A transformer decoder that attends to an input image using
@@ -263,6 +273,8 @@ class OursTwoWayTransformer(nn.Module):
                     activation=activation,
                     attention_downsample_rate=attention_downsample_rate,
                     skip_first_layer_pe=(i == 0),
+                    do_attention1=do_attn1,
+                    do_attention2=do_attn2,
                 )
             )
 
