@@ -36,7 +36,7 @@ default_hooks = dict(
         interval=230,
         save_best=["mIoU"],
         rule=["greater"],
-        max_keep_ckpts=20,
+        max_keep_ckpts=1,
     ),
     sampler_seed=dict(type="DistSamplerSeedHook"),
     visualization=dict(type="SegVisualizationHook"),

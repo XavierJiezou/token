@@ -1,0 +1,2 @@
+CUDA_VISIBLE_DEVICES=4 python tools/train.py configs/faceseg/swin_base_ours_seg_cls_15_embed_256_cloud_ce_dice_no_conv1x1.py
+CUDA_VISIBLE_DEVICES=4 python tools/train.py configs/faceseg/swin_base_ours_seg_cls_15_embed_256_cloud_ce_dice_no_num_classes_fuse.py
