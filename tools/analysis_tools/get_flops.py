@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 import torch
+from torch import nn
 from mmengine import Config, DictAction
 from mmengine.logging import MMLogger
 from mmengine.model import revert_sync_batchnorm
@@ -69,6 +70,8 @@ def inference(args: argparse.Namespace, logger: MMLogger) -> dict:
     model: BaseSegmentor = MODELS.build(cfg.model)
     if hasattr(model, 'auxiliary_head'):
         model.auxiliary_head = None
+    if hasattr(model, 'conv_seg'):
+        model.conv_seg = nn.Identity()
     if hasattr(model, 'teach_backbone'):
         model.teach_backbone = None
     if torch.cuda.is_available():

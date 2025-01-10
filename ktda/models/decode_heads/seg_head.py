@@ -327,17 +327,23 @@ class OursDecoder(BaseDecodeHead):
         transformer,
         activation: Type[nn.Module] = nn.GELU,
         token_lens=11,
+        has_token = True,
         **kwargs,
     ) -> None:
 
         super().__init__(**kwargs)
+        self.has_token = has_token
         self.transformer_dim = transformer_dim
         self.transformer: OursTwoWayTransformer = MODELS.build(transformer)
         self.num_classes = kwargs["num_classes"]
 
-        self.token_list = nn.ModuleList()
-        for _ in range(token_lens):
-            self.token_list.append(nn.Embedding(1, transformer_dim))
+        
+        if has_token:
+            self.token_list = nn.ModuleList()
+            for _ in range(token_lens):
+                self.token_list.append(nn.Embedding(1, transformer_dim))
+        else:
+            self.token_list = [[] for _ in range(token_lens)]
 
         # self.output_upscaling = nn.Sequential(
         #     nn.ConvTranspose2d(
@@ -376,9 +382,15 @@ class OursDecoder(BaseDecodeHead):
         """
         image_embeddings = inputs["image_embeddings"]
         image_pe = inputs["image_pe"]
+        device = image_embeddings.device
         token_embedding = []
         for token in self.token_list:
-            token_embedding.append(token.weight)
+            if self.has_token:
+                token_embedding.append(token.weight)
+            else:
+                token_embedding.append(torch.zeros(1, self.transformer_dim).requires_grad_(False).to(device))
+        
+        # print(f"token_embedding: {len}")
         output_tokens = torch.cat(
             token_embedding,
             dim=0,

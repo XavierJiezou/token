@@ -13,7 +13,7 @@ model = dict(
         type="OursDecoder",
         token_lens=15,
         transformer=dict(type="OursTwoWayTransformer", depth=1),
-        num_classes=4,
+        num_classes=5,
         loss_decode=[
             dict(type="CrossEntropyLoss", use_sigmoid=False, loss_weight=0.2),
             dict(type="DiceLoss", loss_weight=1),
