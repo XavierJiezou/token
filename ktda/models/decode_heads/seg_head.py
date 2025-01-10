@@ -330,6 +330,18 @@ class OursTwoWayTransformer(nn.Module):
         return queries, keys
 
 
+class PrefixModule(nn.Module):
+    def __init__(
+        self,
+        num_classes=4,
+        **kwargs,
+    ) -> None:
+        super().__init__()
+        self.classes = num_classes
+    def forward(self, x):
+        x = x[:, :self.classes]
+        return x
+
 @MODELS.register_module()
 class OursDecoder(BaseDecodeHead):
     def __init__(
@@ -339,7 +351,8 @@ class OursDecoder(BaseDecodeHead):
         transformer,
         activation: Type[nn.Module] = nn.GELU,
         token_lens=11,
-        has_token = True,
+        has_token=True,
+        has_num_classes_fuse=True,
         **kwargs,
     ) -> None:
 
@@ -349,7 +362,6 @@ class OursDecoder(BaseDecodeHead):
         self.transformer: OursTwoWayTransformer = MODELS.build(transformer)
         self.num_classes = kwargs["num_classes"]
 
-        
         if has_token:
             self.token_list = nn.ModuleList()
             for _ in range(token_lens):
@@ -383,7 +395,10 @@ class OursDecoder(BaseDecodeHead):
         self.output_hypernetwork_mlps = MLP(
             transformer_dim, transformer_dim, transformer_dim // 16, 3
         )
-        self.class_agg = nn.Conv2d(token_lens, self.num_classes, 1)
+        if has_num_classes_fuse:
+            self.class_agg = nn.Conv2d(token_lens, self.num_classes, 1)
+        else:
+            self.class_agg = PrefixModule(self.num_classes)
 
     def forward(
         self, inputs: Dict[str, torch.Tensor]
@@ -400,8 +415,9 @@ class OursDecoder(BaseDecodeHead):
             if self.has_token:
                 token_embedding.append(token.weight)
             else:
-                token_embedding.append(torch.zeros(1, self.transformer_dim).requires_grad_(False).to(device))
-        
+                token_embedding.append(torch.zeros(
+                    1, self.transformer_dim).requires_grad_(False).to(device))
+
         # print(f"token_embedding: {len}")
         output_tokens = torch.cat(
             token_embedding,
@@ -410,37 +426,38 @@ class OursDecoder(BaseDecodeHead):
 
         tokens = output_tokens.unsqueeze(0).expand(
             image_embeddings.size(0), -1, -1
-        )  ##### torch.Size([4, 11, 256])
+        )  # torch.Size([4, 11, 256])
 
-        src = image_embeddings  ##### torch.Size([4, 256, 128, 128])
+        src = image_embeddings  # torch.Size([4, 256, 128, 128])
         pos_src = image_pe.expand(image_embeddings.size(0), -1, -1, -1)
         b, c, h, w = src.shape
         # Run the transformer
         # print(src.shape, pos_src.shape, tokens.shape)
         hs, src = self.transformer(
             src, pos_src, tokens
-        )  ####### hs - torch.Size([BS, 11, 256]), src - torch.Size([BS, 16348, 256])
+        )  # hs - torch.Size([BS, 11, 256]), src - torch.Size([BS, 16348, 256])
         mask_token_out = hs[:, :, :]
 
-        src = src.transpose(1, 2).view(b, c, h, w)  ##### torch.Size([4, 256, 128, 128])
+        # torch.Size([4, 256, 128, 128])
+        src = src.transpose(1, 2).view(b, c, h, w)
         upscaled_embedding = self.output_upscaling(
             src
-        )  ##### torch.Size([4, 32, 512, 512])
+        )  # torch.Size([4, 32, 512, 512])
         hyper_in = self.output_hypernetwork_mlps(
             mask_token_out
-        )  ##### torch.Size([1, 11, 32])
+        )  # torch.Size([1, 11, 32])
         # hyper_in = hyper_in[:, [0, 2], :]
         b, c, h, w = upscaled_embedding.shape
         seg_output = (hyper_in @ upscaled_embedding.view(b, c, h * w)).view(
             b, -1, h, w
-        )  ##### torch.Size([1, 11, 512, 512])
+        )  # torch.Size([1, 11, 512, 512])
         # torch.Size([bs, 1024, 32, 32])
         # conv,i-> torch.Size([bs,cls, 512, 512])
         seg_output = self.class_agg(seg_output)
         # return seg_output,hyper_in
         return {
-            "seg_output":seg_output,
-            "hyper_in":hyper_in
+            "seg_output": seg_output,
+            "hyper_in": hyper_in
         }
 
     def cls_seg(self, feat):
@@ -451,8 +468,8 @@ class OursDecoder(BaseDecodeHead):
         self, seg_logits: Tensor, batch_img_metas: List[dict]
     ) -> Tensor:
         return seg_logits["seg_output"]
-    
-    def loss_by_feat(self, seg_logits: Dict[str,Tensor],
+
+    def loss_by_feat(self, seg_logits: Dict[str, Tensor],
                      batch_data_samples) -> dict:
         """Compute segmentation loss.
 
