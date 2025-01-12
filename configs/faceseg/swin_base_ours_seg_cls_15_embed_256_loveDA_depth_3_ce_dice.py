@@ -8,11 +8,11 @@ _base_ = [
 data_preprocessor = dict(size=(512, 512))
 model = dict(
     data_preprocessor=data_preprocessor,
-    backbone=dict(model="swinv2_base", input_resolution=512),
+    backbone=dict(model="swin_base", input_resolution=512),
     decode_head=dict(
         type="OursDecoder",
         token_lens=7,
-        transformer=dict(type="OursTwoWayTransformer", depth=1),
+        transformer=dict(type="OursTwoWayTransformer", depth=3),
         num_classes=7, 
     ),
 )
