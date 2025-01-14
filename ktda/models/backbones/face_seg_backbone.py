@@ -1,19 +1,7 @@
-import warnings
-warnings.filterwarnings("ignore")
-import numpy as np
-import cv2
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
-import torch
-from torch import Tensor, nn
-import math
-from typing import Tuple, Type
-from PIL import Image
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from typing import Any, Optional, Tuple, Type
+from mmengine.model import BaseModule
+from mmseg.registry import MODELS
+import torchvision.models as models
+import torchvision
 from torchvision.models import (
     convnext_base,
     convnext_small,
@@ -25,11 +13,19 @@ from torchvision.models import (
     mobilenet_v3_large,
     efficientnet_v2_m,
 )
+from typing import Any, Optional, Tuple, Type
+from PIL import Image
+from typing import Tuple, Type
+import math
+from torch import Tensor, nn
+import torch.nn as nn
+import torch.nn.functional as F
+import torch
+import cv2
 import numpy as np
-import torchvision
-import torchvision.models as models
-from mmseg.registry import MODELS
-from mmengine.model import BaseModule
+import warnings
+warnings.filterwarnings("ignore")
+
 
 class LayerNorm2d(nn.Module):
     def __init__(self, num_channels: int, eps: float = 1e-6) -> None:
@@ -361,12 +357,13 @@ class Attention(nn.Module):
 
         return out
 
+
 class SegfaceMLP(nn.Module):
     """
     Linear Embedding.
     """
 
-    def __init__(self, input_dim,out_dim=256):
+    def __init__(self, input_dim, out_dim=256):
         super().__init__()
         self.proj = nn.Linear(input_dim, out_dim)
 
@@ -375,58 +372,66 @@ class SegfaceMLP(nn.Module):
         hidden_states = self.proj(hidden_states)
         return hidden_states
 
+
 @MODELS.register_module()
 class SegFaceCeleb(BaseModule):
-    def __init__(self, input_resolution, model,dinov2_config=None,out_chans=256,has_conv1x1=True,position_embedding=256,**kwargs):
+    def __init__(self, input_resolution, model, dinov2_config=None, out_chans=256, has_conv1x1=True, position_embedding=256, **kwargs):
         super().__init__(**kwargs)
         self.input_resolution = input_resolution
         self.model = model
-
         if self.model == "swin_base":
             swin_v2 = swin_b(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "swinv2_base":
             swin_v2 = swin_v2_b(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "swinv2_small":
             swin_v2 = swin_v2_s(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "swinv2_tiny":
             swin_v2 = swin_v2_t(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "convnext_base":
             convnext = convnext_base(pretrained=False)
-            self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "convnext_small":
             convnext = convnext_small(pretrained=True)
-            self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "convnext_tiny":
             convnext = convnext_tiny(pretrained=True)
-            self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "resnet":
             resnet101 = models.resnet101(pretrained=True)
-            self.backbone = torch.nn.Sequential(*(list(resnet101.children())[:-1]))
+            self.backbone = torch.nn.Sequential(
+                *(list(resnet101.children())[:-1]))
             self.target_layer_names = ["4", "5", "6", "7"]
             self.multi_scale_features = []
 
@@ -440,6 +445,12 @@ class SegFaceCeleb(BaseModule):
             efficientnet = efficientnet_v2_m(pretrained=True).features
             self.backbone = efficientnet
             self.target_layer_names = ["2", "3", "5", "8"]
+            self.multi_scale_features = []
+
+        if self.model == "dinov2":
+            self.backbone = MODELS.build(dinov2_config)
+            self.target_layer_names = ["layers.2",
+                                       "layers.5", "layers.8", "layers.11"]
             self.multi_scale_features = []
 
         embed_dim = 1024
@@ -463,9 +474,9 @@ class SegFaceCeleb(BaseModule):
 
         num_encoder_blocks = 4
         if self.model in ["swin_base", "swinv2_base", "convnext_base"]:
-            hidden_sizes = [128, 256, 512, 1024]  ### Swin Base and ConvNext Base
+            hidden_sizes = [128, 256, 512, 1024]  # Swin Base and ConvNext Base
         if self.model in ["resnet"]:
-            hidden_sizes = [256, 512, 1024, 2048]  ### ResNet
+            hidden_sizes = [256, 512, 1024, 2048]  # ResNet
         if self.model in [
             "swinv2_small",
             "swinv2_tiny",
@@ -477,16 +488,23 @@ class SegFaceCeleb(BaseModule):
                 192,
                 384,
                 768,
-            ]  ### Swin Small/Tiny and ConvNext Small/Tiny
+            ]  # Swin Small/Tiny and ConvNext Small/Tiny
         if self.model in ["mobilenet"]:
-            hidden_sizes = [24, 40, 112, 960]  ### MobileNet
+            hidden_sizes = [24, 40, 112, 960]  # MobileNet
         if self.model in ["efficientnet"]:
-            hidden_sizes = [48, 80, 176, 1280]  ### EfficientNet
+            hidden_sizes = [48, 80, 176, 1280]  # EfficientNet
+        if self.model in ["dinov2"]:
+            hidden_sizes = [
+                768,
+                768,
+                768,
+                768,
+            ]  # Dinov2
         decoder_hidden_size = out_chans
 
         mlps = []
         for i in range(num_encoder_blocks):
-            mlp = SegfaceMLP(input_dim=hidden_sizes[i],out_dim=out_chans)
+            mlp = SegfaceMLP(input_dim=hidden_sizes[i], out_dim=out_chans)
             mlps.append(mlp)
         self.linear_c = nn.ModuleList(mlps)
 
@@ -511,7 +529,7 @@ class SegFaceCeleb(BaseModule):
             ]:
                 self.multi_scale_features.append(
                     output.permute(0, 3, 1, 2).contiguous()
-                )  ### Swin, Swinv2
+                )  # Swin, Swinv2
             if self.model in [
                 "convnext_base",
                 "convnext_small",
@@ -521,7 +539,16 @@ class SegFaceCeleb(BaseModule):
             ]:
                 self.multi_scale_features.append(
                     output
-                )  ### ConvNext, ResNet, EfficientNet, MobileNet
+                )  # ConvNext, ResNet, EfficientNet, MobileNet
+            if self.model == "dinov2":
+                B_,N,_ = output.shape
+                N = N - 1
+                N = int(math.sqrt(N))
+                output = self.backbone._format_output(output, (N,N))
+                self.multi_scale_features.append(
+                    output
+                )
+
 
         return hook
 
@@ -529,21 +556,35 @@ class SegFaceCeleb(BaseModule):
         self.multi_scale_features.clear()
 
         _, _, h, w = x.shape
-        features = self.backbone(x).squeeze()
-
+        features = self.backbone(x)
         batch_size = self.multi_scale_features[-1].shape[0]
         all_hidden_states = ()
         for encoder_hidden_state, mlp in zip(self.multi_scale_features, self.linear_c):
             height, width = encoder_hidden_state.shape[2], encoder_hidden_state.shape[3]
-            encoder_hidden_state = mlp(encoder_hidden_state)
+            try:
+                encoder_hidden_state = mlp(encoder_hidden_state)
+            except:
+                for i in self.multi_scale_features:
+                    print(i.shape)
+                
+                # for i in features:
+                #     print(i.shape)
+                exit()
+
             encoder_hidden_state = encoder_hidden_state.permute(0, 2, 1)
             encoder_hidden_state = encoder_hidden_state.reshape(
                 batch_size, -1, height, width
             )
             # upsample
+            # encoder_hidden_state = nn.functional.interpolate(
+            #     encoder_hidden_state,
+            #     size=self.multi_scale_features[0].size()[2:],
+            #     mode="bilinear",
+            #     align_corners=False,
+            # )
             encoder_hidden_state = nn.functional.interpolate(
                 encoder_hidden_state,
-                size=self.multi_scale_features[0].size()[2:],
+                size=(h//4, w//4),
                 mode="bilinear",
                 align_corners=False,
             )
@@ -551,14 +592,13 @@ class SegFaceCeleb(BaseModule):
 
         fused_states = self.linear_fuse(
             torch.cat(all_hidden_states[::-1], dim=1)
-        )  #### torch.Size([BS, 256, 128, 128])
+        )  # torch.Size([BS, 256, 128, 128])
         image_pe = self.pe_layer(
             (fused_states.shape[2], fused_states.shape[3])
         ).unsqueeze(0)
         # seg_output = self.face_decoder(image_embeddings=fused_states, image_pe=image_pe)
 
         return {
-            "image_embeddings":fused_states,
-            "image_pe":image_pe,
+            "image_embeddings": fused_states,
+            "image_pe": image_pe,
         }
-
