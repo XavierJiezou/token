@@ -24,6 +24,7 @@ import torch
 import cv2
 import numpy as np
 import warnings
+
 warnings.filterwarnings("ignore")
 
 
@@ -374,64 +375,136 @@ class SegfaceMLP(nn.Module):
 
 
 @MODELS.register_module()
+class FeatureFuse(nn.Module):
+    def __init__(
+        self,
+        in_channels=256*4,
+        hidden_channels=512,
+        dilation1=2,
+        dilation2=4,
+        kernel_size=3,
+        out_channels=256,
+        norm="LN",
+    ):
+        super().__init__()
+
+        padding1 = dilation1 * (kernel_size - 1) // 2
+        padding2 = dilation2 * (kernel_size - 1) // 2
+
+        if norm == "LN":
+            norm = LayerNorm2d
+        elif norm == "BN":
+            norm = nn.BatchNorm2d
+        else:
+            raise NotImplementedError
+
+        # 第一分支
+        self.branch1 = nn.Sequential(
+            nn.Conv2d(in_channels, hidden_channels, kernel_size=1),
+            norm(hidden_channels),  # 添加 BatchNorm
+            nn.Conv2d(
+                hidden_channels,
+                hidden_channels,
+                kernel_size=kernel_size,
+                dilation=dilation1,
+                groups=hidden_channels,
+                padding=padding1,
+            ),
+            norm(hidden_channels),  # 添加 BatchNorm
+            nn.Conv2d(hidden_channels, out_channels, kernel_size=1),
+            norm(out_channels),  # 添加 BatchNorm
+        )
+
+        # 第二分支
+        self.branch2 = nn.Sequential(
+            nn.Conv2d(in_channels, hidden_channels, kernel_size=1),
+            norm(hidden_channels),  # 添加 BatchNorm
+            nn.Conv2d(
+                hidden_channels,
+                hidden_channels,
+                kernel_size=kernel_size,
+                dilation=dilation2,
+                groups=hidden_channels,
+                padding=padding2,
+            ),
+            norm(hidden_channels),  # 添加 BatchNorm
+            nn.Conv2d(hidden_channels, out_channels, kernel_size=1),
+            norm(out_channels),  # 添加 BatchNorm
+        )
+
+    def forward(self, x):
+        # 分支计算
+        branch1_out = self.branch1(x)  # 第一分支输出
+        branch2_out = self.branch2(x)  # 第二分支输出
+
+        # 特征融合
+        F_2t = F.sigmoid(branch1_out) * branch2_out
+        F_1t = F.gelu(branch2_out) * branch2_out
+        out = F_1t * F_2t
+        return out
+
+
+@MODELS.register_module()
 class SegFaceCeleb(BaseModule):
-    def __init__(self, input_resolution, model, dinov2_config=None, out_chans=256, has_conv1x1=True, position_embedding=256, **kwargs):
+    def __init__(
+        self,
+        input_resolution,
+        model,
+        dinov2_config=None,
+        out_chans=256,
+        has_conv1x1=True,
+        position_embedding=256,
+        feature_fuse=None,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.input_resolution = input_resolution
         self.model = model
         if self.model == "swin_base":
             swin_v2 = swin_b(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(
-                *(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "swinv2_base":
             swin_v2 = swin_v2_b(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(
-                *(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "swinv2_small":
             swin_v2 = swin_v2_s(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(
-                *(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "swinv2_tiny":
             swin_v2 = swin_v2_t(weights="IMAGENET1K_V1")
-            self.backbone = torch.nn.Sequential(
-                *(list(swin_v2.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(swin_v2.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "convnext_base":
             convnext = convnext_base(pretrained=False)
-            self.backbone = torch.nn.Sequential(
-                *(list(convnext.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "convnext_small":
             convnext = convnext_small(pretrained=True)
-            self.backbone = torch.nn.Sequential(
-                *(list(convnext.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "convnext_tiny":
             convnext = convnext_tiny(pretrained=True)
-            self.backbone = torch.nn.Sequential(
-                *(list(convnext.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
 
         if self.model == "resnet":
             resnet101 = models.resnet101(pretrained=True)
-            self.backbone = torch.nn.Sequential(
-                *(list(resnet101.children())[:-1]))
+            self.backbone = torch.nn.Sequential(*(list(resnet101.children())[:-1]))
             self.target_layer_names = ["4", "5", "6", "7"]
             self.multi_scale_features = []
 
@@ -449,8 +522,7 @@ class SegFaceCeleb(BaseModule):
 
         if self.model == "dinov2":
             self.backbone = MODELS.build(dinov2_config)
-            self.target_layer_names = ["layers.2",
-                                       "layers.5", "layers.8", "layers.11"]
+            self.target_layer_names = ["layers.2", "layers.5", "layers.8", "layers.11"]
             self.multi_scale_features = []
 
         embed_dim = 1024
@@ -509,7 +581,10 @@ class SegFaceCeleb(BaseModule):
         self.linear_c = nn.ModuleList(mlps)
 
         # The following 3 layers implement the ConvModule of the original implementation
-        if has_conv1x1:
+        if feature_fuse:
+            self.linear_fuse = MODELS.build(feature_fuse)
+
+        elif has_conv1x1:
             self.linear_fuse = nn.Conv2d(
                 in_channels=decoder_hidden_size * num_encoder_blocks,
                 out_channels=decoder_hidden_size,
@@ -541,14 +616,11 @@ class SegFaceCeleb(BaseModule):
                     output
                 )  # ConvNext, ResNet, EfficientNet, MobileNet
             if self.model == "dinov2":
-                B_,N,_ = output.shape
+                B_, N, _ = output.shape
                 N = N - 1
                 N = int(math.sqrt(N))
-                output = self.backbone._format_output(output, (N,N))
-                self.multi_scale_features.append(
-                    output
-                )
-
+                output = self.backbone._format_output(output, (N, N))
+                self.multi_scale_features.append(output)
 
         return hook
 
@@ -566,7 +638,7 @@ class SegFaceCeleb(BaseModule):
             except:
                 for i in self.multi_scale_features:
                     print(i.shape)
-                
+
                 # for i in features:
                 #     print(i.shape)
                 exit()
@@ -584,7 +656,7 @@ class SegFaceCeleb(BaseModule):
             # )
             encoder_hidden_state = nn.functional.interpolate(
                 encoder_hidden_state,
-                size=(h//4, w//4),
+                size=(h // 4, w // 4),
                 mode="bilinear",
                 align_corners=False,
             )

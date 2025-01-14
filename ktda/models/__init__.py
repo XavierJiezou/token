@@ -4,6 +4,7 @@ from .fmm import FMM
 from .backbones.face_seg_backbone import SegFaceCeleb
 from .decode_heads.face_seg_head import TwoWayTransformer, FaceDecoder
 from .decode_heads.seg_head import OursDecoder, OursTwoWayTransformer
+from .backbones import FeatureFuse
 
 __all__ = [
     "DistillEncoderDecoder",
@@ -15,4 +16,5 @@ __all__ = [
     "OursDecoder",
     "OursTwoWayTransformer",
     "ContrastLossEncoderDecoder",
+    "FeatureFuse"
 ]
