@@ -485,7 +485,7 @@ class SegFaceCeleb(BaseModule):
             self.multi_scale_features = []
 
         if self.model == "convnext_base":
-            convnext = convnext_base(pretrained=False)
+            convnext = convnext_base(pretrained=True)
             self.backbone = torch.nn.Sequential(*(list(convnext.children())[:-1]))
             self.target_layer_names = ["0.1", "0.3", "0.5", "0.7"]
             self.multi_scale_features = []
