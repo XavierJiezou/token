@@ -84,16 +84,12 @@ train_pipeline = [
         keep_ratio=True,
     ),
     dict(type="RandomCrop", crop_size=crop_size, cat_max_ratio=0.75),
-    dict(type="RandomFlip", prob=[0.5, 0.5], direction=["horizontal", "vertical"]),
+    # dict(type="RandomFlip", prob=[0.5, 0.5], direction=["horizontal", "vertical"]),
     dict(
         transforms=[
-            dict(
-                type="RandomBrightnessContrast",
-                brightness_limit=0.25,
-                contrast_limit=0.25,
-                p=0.25,
-            ),
-            dict(type="Sharpen"),
+            dict(type="RandomRotate90",p=0.5),
+            dict(type="HorizontalFlip",p=0.5),
+            dict(type="VerticalFlip",p=0.5),
         ],
         type="Albu",
     ),
