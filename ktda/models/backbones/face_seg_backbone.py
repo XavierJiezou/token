@@ -455,6 +455,7 @@ class SegFaceCeleb(BaseModule):
         has_conv1x1=True,
         position_embedding=256,
         feature_fuse=None,
+        frozen_backbone=False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -524,6 +525,11 @@ class SegFaceCeleb(BaseModule):
             self.backbone = MODELS.build(dinov2_config)
             self.target_layer_names = ["layers.2", "layers.5", "layers.8", "layers.11"]
             self.multi_scale_features = []
+        
+        if frozen_backbone:
+            self.backbone.requires_grad_(False)
+            for param in self.backbone.parameters():
+                param.requires_grad = False
 
         embed_dim = 1024
         # out_chans = 256
