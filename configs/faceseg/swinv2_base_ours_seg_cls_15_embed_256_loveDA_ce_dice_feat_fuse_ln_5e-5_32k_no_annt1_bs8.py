@@ -61,4 +61,7 @@ default_hooks = dict(
     visualization=dict(type="SegVisualizationHook"),
 )
 
-
+batch_size=8
+train_dataloader=dict(batch_size=batch_size)
+val_dataloader=dict(batch_size=batch_size)
+test_dataloader=dict(batch_size=batch_size)

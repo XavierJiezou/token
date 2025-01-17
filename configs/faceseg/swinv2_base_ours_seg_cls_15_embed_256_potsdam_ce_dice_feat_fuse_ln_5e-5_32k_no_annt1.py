@@ -1,6 +1,6 @@
 _base_ = [
     "../_base_/models/face_seg.py",
-    "../_base_/datasets/loveda.py",
+    "../_base_/datasets/potsdam.py",
     "../_base_/default_runtime.py",
     "../_base_/schedules/cloud_scedule.py",
 ]
@@ -61,4 +61,7 @@ default_hooks = dict(
     visualization=dict(type="SegVisualizationHook"),
 )
 
-
+batch_size=8
+train_dataloader=dict(batch_size=batch_size)
+val_dataloader=dict(batch_size=batch_size)
+test_dataloader=dict(batch_size=batch_size)
