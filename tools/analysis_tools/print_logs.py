@@ -80,7 +80,7 @@ def plot_training_history(json_file, save_dir):
     print(f"Saved combined plot for loss, mIoU, and lr to {combined_save_path}")
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--json_file', type=str, default='work_dirs/swinv2_base_ours_seg_cls_15_embed_256_loveDA_train_val_ce_dice_feat_fuse_ln_5e-5_32k_data_process_like_sfanet/20250117_170337/vis_data/scalars.json')
+parser.add_argument('--json_file', type=str, default='work_dirs/swinv2_base_ours_seg_cls_15_embed_256_loveDA_train_val_all_ce_dice_feat_fuse_ln_1e-4_32k_data_process_like_sfanet/20250118_220917/vis_data/scalars.json')
 parser.add_argument("--output_dir", type=str, default='plot_training_metrics')
 args = parser.parse_args()
 # 设置JSON文件路径和保存图片的路径
